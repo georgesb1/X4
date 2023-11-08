@@ -1,0 +1,49 @@
+---
+- hosts: 127.0.0.1
+  tasks:
+    - name: Update APT package list
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: Install prerequisite packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      become: yes
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+
+    - name: Download Docker GPG key
+      command: "curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /tmp/docker-archive-key.gpg"
+      become: yes
+
+    - name: Add Docker GPG key
+      command: "gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg /tmp/docker-archive-key.gpg"
+      become: yes
+
+    - name: Create Docker APT sources file
+      file:
+        path: /etc/apt/sources.list.d/docker.list
+        state: touch
+      become: yes
+
+    - name: Add Docker repository to APT sources
+      template:
+        src: docker.list.j2
+        dest: /etc/apt/sources.list.d/docker.list
+        owner: root
+        group: root
+        mode: '0644'
+      become: yes
+
+    - name: Start Prometheus container
+      command: "docker run -d --name=Prometheus -p 9090:9090 prom/prometheus"
+      become: yes
+
+    - name: Start Grafana container
+      command: "docker run -d --name=Grafana -p 3000:3000 grafana/grafana"
+      become: yes
